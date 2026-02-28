@@ -1,0 +1,37 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: stock_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: stockuser
+      POSTGRES_PASSWORD: stockpass
+      POSTGRES_DB: stockdb
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build: ./stock-api
+    container_name: stock_backend
+    restart: always
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL: postgresql://stockuser:stockpass@postgres:5432/stockdb
+    depends_on:
+      - postgres
+
+  frontend:
+    build: ./front
+    container_name: stock_front
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend:3001
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
