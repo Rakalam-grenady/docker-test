@@ -1,3 +1,5 @@
+version: "3.9"
+
 services:
   postgres:
     image: postgres:15
@@ -5,33 +7,40 @@ services:
     restart: always
     environment:
       POSTGRES_USER: stockuser
-      POSTGRES_PASSWORD: stockpass
+      POSTGRES_PASSWORD: password
       POSTGRES_DB: stockdb
     ports:
-      - "5433:5432"
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
   backend:
-    build: ./stock-api
+    build: ./backend
     container_name: stock_backend
     restart: always
+    depends_on:
+      - postgres
     ports:
       - "3001:3001"
     environment:
-      DATABASE_URL: postgresql://stockuser:stockpass@postgres:5432/stockdb
-    depends_on:
-      - postgres
+      DATABASE_URL: postgresql://stockuser:password@postgres:5432/stockdb
+      JWT_SECRET: supersecret
+      JWT_REFRESH_SECRET: superrefreshsecret
+    command: sh -c "npx prisma migrate deploy && node dist/main.js"
 
   frontend:
-    build: ./front
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:3001
     container_name: stock_front
+    restart: always
+    depends_on:
+      - backend
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://backend:3001
-    depends_on:
-      - backend
+      NEXT_PUBLIC_API_URL: http://localhost:3001
 
 volumes:
   postgres_data:
